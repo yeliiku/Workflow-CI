@@ -16,6 +16,10 @@ jobs:
     - name: Run actions/checkout@v3
       uses: actions/checkout@v3
 
+    # FIX: Mengatasi error Git permission di Runner
+    - name: Fix Git Safe Directory
+      run: git config --global --add safe.directory '*'
+
     - name: Set up Python 3.12.7
       uses: actions/setup-python@v4
       with:
@@ -34,12 +38,19 @@ jobs:
     # --- Tahap MLflow (DIPERBAIKI) ---
     - name: Run mlflow project
       run: |
-        # FIX: Gunakan ./MLProject dan --env-manager=local
-        mlflow run ./MLProject --env-manager=local --experiment-name rf-ci-experiment
+        # 1. Set URI agar mlruns tersimpan di root folder (penting untuk langkah selanjutnya)
+        export MLFLOW_TRACKING_URI=file:$(pwd)/mlruns
+        
+        # 2. Masuk ke folder project
+        cd MLProject
+        
+        # 3. Jalankan MLflow dengan context '.' (folder saat ini)
+        mlflow run . --env-manager=local --experiment-name rf-ci-experiment
 
     - name: Get latest MLflow run_id
       id: get_run_id
       run: |
+        # Script ini akan mencari di folder root/mlruns (sesuai setting URI di atas)
         RUN_ID=$(ls -td mlruns/*/* | head -1 | awk -F'/' '{print $(NF)}')
         echo "Latest Run ID: $RUN_ID"
         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
@@ -48,7 +59,7 @@ jobs:
     - name: Install Python dependencies
       run: pip install requests
 
-    - name: Upload to Google Drive
+    - name: Upload to Google Drive (Disimpan ke GitHub Artifacts)
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-artifacts
@@ -57,8 +68,11 @@ jobs:
     # --- Tahap Docker (Advanced) ---
     - name: Build Docker Model
       env:
+        # Perlu set URI yang sama agar build-docker bisa menemukan modelnya
+        MLFLOW_TRACKING_URI: file:./mlruns
         RUN_ID: ${{ steps.get_run_id.outputs.run_id }}
       run: |
+        echo "Building Docker for Run ID: $RUN_ID"
         mlflow models build-docker \
           -m "runs:/$RUN_ID/model" \
           -n "my-rf-model:latest" \
