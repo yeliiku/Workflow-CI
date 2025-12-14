@@ -34,7 +34,7 @@ jobs:
     # --- Tahap MLflow ---
     - name: Run mlflow project
       run: |
-        mlflow run MLProject --no-conda --experiment-name rf-ci-experiment
+        mlflow run MLProject --env-manager=local --experiment-name rf-ci-experiment
 
     - name: Get latest MLflow run_id
       id: get_run_id
