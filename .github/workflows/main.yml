@@ -9,14 +9,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # --- Tahap Persiapan ---
     - name: Set up job
       run: echo "Starting Job"
 
     - name: Run actions/checkout@v3
       uses: actions/checkout@v3
 
-    # FIX: Mengatasi error Git permission di Runner
     - name: Fix Git Safe Directory
       run: git config --global --add safe.directory '*'
 
@@ -35,7 +33,6 @@ jobs:
       run: |
         pip install mlflow pandas scikit-learn
 
-    # --- Tahap MLflow (DIPERBAIKI) ---
     - name: Run mlflow project
       run: |
         # 1. Set URI agar mlruns tersimpan di root folder (penting untuk langkah selanjutnya)
@@ -55,7 +52,6 @@ jobs:
         echo "Latest Run ID: $RUN_ID"
         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
-    # --- Tahap Simpan Artefak ---
     - name: Install Python dependencies
       run: pip install requests
 
@@ -65,10 +61,8 @@ jobs:
         name: mlflow-artifacts
         path: mlruns
 
-    # --- Tahap Docker (Advanced) ---
     - name: Build Docker Model
       env:
-        # Perlu set URI yang sama agar build-docker bisa menemukan modelnya
         MLFLOW_TRACKING_URI: file:./mlruns
         RUN_ID: ${{ steps.get_run_id.outputs.run_id }}
       run: |
@@ -92,7 +86,6 @@ jobs:
       run: |
         docker push ${{ secrets.DOCKER_USERNAME }}/rf-ci-model:latest
 
-    # --- Tahap Penyelesaian ---
     - name: Post Log in to Docker Hub
       run: echo "Logged out"
 
